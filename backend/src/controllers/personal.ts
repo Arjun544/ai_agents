@@ -1,0 +1,110 @@
+import { Agent, run } from '@openai/agents';
+import { Server as SocketIOServer } from 'socket.io';
+import { PERSONAL_PROMPT } from '../prompts/personal';
+
+import { Request, Response } from 'express';
+
+export const personalController = {
+    chat: async (req: Request, res: Response) => {
+        try {
+            const body = req.body as { message?: string; socketId?: string };
+            const userMessage = body?.message || 'Hello! How can I help you today?';
+            const socketId = body?.socketId;
+
+            // Get Socket.IO instance
+            const io = (globalThis as any).io as SocketIOServer;
+
+            if (!io) {
+                return res.status(500).json({
+                    message: 'Socket.IO server not initialized.',
+                    success: false,
+                });
+            }
+
+            const agent = new Agent({
+                name: 'General Assistant',
+                instructions: PERSONAL_PROMPT,
+            });
+
+            const result = await run(
+                agent,
+                userMessage, {
+                stream: true,
+            }
+            );
+
+            // If socketId is provided, stream via Socket.IO
+            if (socketId) {
+                const stream = result.toTextStream({
+                    compatibleWithNodeStreams: true,
+                });
+
+                // Stream chunks to the specific socket using Node.js stream API
+                return new Promise((resolve, reject) => {
+                    stream.on('data', (chunk: Buffer) => {
+                        // Emit chunk to the specific socket
+                        io.to(socketId).emit('stream:chunk', {
+                            chunk: chunk.toString(),
+                            done: false,
+                        });
+                    });
+
+                    stream.on('end', () => {
+                        // Stream complete
+                        io.to(socketId).emit('stream:chunk', {
+                            chunk: '',
+                            done: true,
+                        });
+                        io.to(socketId).emit('stream:complete', {
+                            message: result.finalOutput,
+                        });
+                        resolve(
+                            res.json({
+                                message: 'Streaming completed',
+                                socketId,
+                                success: true,
+                            })
+                        );
+                    });
+
+                    stream.on('error', (streamError: Error) => {
+                        io.to(socketId).emit('stream:error', {
+                            error: streamError instanceof Error
+                                ? streamError.message
+                                : String(streamError),
+                        });
+                        reject(streamError);
+                    });
+                });
+            }
+
+            // Fallback: return final output if no socketId provided
+            return res.json({
+                message: result.finalOutput,
+                success: true,
+            });
+        } catch (error) {
+            const errorMessage = error instanceof Error
+                ? error.message
+                : String(error);
+
+            // Emit error to socket if socketId was provided
+            const body = req.body as { message?: string; socketId?: string };
+            const socketId = body?.socketId;
+            if (socketId) {
+                const io = (globalThis as any).io as SocketIOServer;
+                if (io) {
+                    io.to(socketId).emit('stream:error', {
+                        error: errorMessage,
+                    });
+                }
+            }
+
+            return res.status(500).json({
+                message: 'An error occurred while processing your request.',
+                error: errorMessage,
+                success: false,
+            });
+        }
+    },
+};
