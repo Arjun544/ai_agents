@@ -1,11 +1,12 @@
 import express, { Router } from "express";
 import { z } from "zod";
-import { personalController } from "../controllers/personal";
+import { agentController } from "../controllers/agent";
 
 const router = Router();
 
 // Validation schema
 const chatBodySchema = z.object({
+    agent: z.string().default("Personal"),
     message: z.string().optional(),
     socketId: z.string().optional(),
 });
@@ -27,7 +28,7 @@ const validateChatBody = (req: express.Request, res: express.Response, next: exp
     }
 };
 
-router.post("/chat", validateChatBody, personalController.chat);
+router.post("/chat", validateChatBody, agentController.chat);
 
-export { router as personalRoutes };
+export { router as agentRoutes };
 

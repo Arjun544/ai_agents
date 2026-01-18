@@ -3,7 +3,7 @@ import express from "express";
 import { createServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
 
-import { personalRoutes } from "./routes/personal";
+import { agentRoutes } from "./routes/agent";
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 5000;
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
@@ -46,7 +46,7 @@ app.get("/", (req: express.Request, res: express.Response) => {
   res.send("Hello Express");
 });
 
-app.use("/personal", personalRoutes);
+app.use("/agent", agentRoutes);
 
 // Initialize Socket.IO server
 const io = new SocketIOServer(server, {

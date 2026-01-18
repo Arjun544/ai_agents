@@ -1,15 +1,29 @@
 import { Agent, run } from '@openai/agents';
 import { Server as SocketIOServer } from 'socket.io';
+import { COACH_PROMPT } from '../prompts/coach';
+import { FINANCE_PROMPT } from '../prompts/finance';
+import { HEALTH_PROMPT } from '../prompts/health';
 import { PERSONAL_PROMPT } from '../prompts/personal';
+import { PLANNER_PROMPT } from '../prompts/planner';
 
 import { Request, Response } from 'express';
+import { currentTimeTool } from '../tools/current-time-tool';
 
-export const personalController = {
+const AGENT_PROMPTS: Record<string, string> = {
+    'Personal': PERSONAL_PROMPT,
+    'Planner': PLANNER_PROMPT,
+    'Coach': COACH_PROMPT,
+    'Health': HEALTH_PROMPT,
+    'Finance': FINANCE_PROMPT,
+};
+
+export const agentController = {
     chat: async (req: Request, res: Response) => {
         try {
-            const body = req.body as { message?: string; socketId?: string };
+            const body = req.body as { message?: string; socketId?: string; agent?: string };
             const userMessage = body?.message || 'Hello! How can I help you today?';
             const socketId = body?.socketId;
+            const agentName = body?.agent || 'Personal';
 
             // Get Socket.IO instance
             const io = (globalThis as any).io as SocketIOServer;
@@ -22,8 +36,9 @@ export const personalController = {
             }
 
             const agent = new Agent({
-                name: 'General Assistant',
-                instructions: PERSONAL_PROMPT,
+                name: agentName,
+                instructions: AGENT_PROMPTS[agentName] || PERSONAL_PROMPT,
+                tools: [currentTimeTool],
             });
 
             const result = await run(
