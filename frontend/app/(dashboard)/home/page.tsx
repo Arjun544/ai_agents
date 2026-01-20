@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { useAgent } from "@/context/agent-context";
+import { useUser } from "@clerk/nextjs";
 import { Send } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
@@ -21,6 +22,7 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:500
 
 export default function DashboardPage() {
     const [messages, setMessages] = useState<Message[]>([]);
+    const [conversationId, setConversationId] = useState('6');
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [socketId, setSocketId] = useState<string | null>(null);
@@ -29,6 +31,7 @@ export default function DashboardPage() {
     const socketRef = useRef<Socket | null>(null);
     const streamingMessageIdRef = useRef<string | null>(null);
     const { agents, activeAgent, setActiveAgent } = useAgent();
+    const { user } = useUser();
 
     // Initialize Socket.IO connection
     useEffect(() => {
@@ -156,7 +159,9 @@ export default function DashboardPage() {
                 body: JSON.stringify({
                     agent: activeAgent.name || "Personal",
                     message: messageText,
+                    conversationId: conversationId || undefined,
                     socketId: socketId || undefined,
+                    userId: user?.id,
                 }),
             });
 

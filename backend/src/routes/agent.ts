@@ -6,6 +6,7 @@ const router = Router();
 
 // Validation schema
 const chatBodySchema = z.object({
+    userId: z.string().optional(),
     agent: z.string().default("Personal"),
     message: z.string().optional(),
     socketId: z.string().optional(),

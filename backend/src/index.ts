@@ -4,6 +4,7 @@ import { createServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
 
 import { agentRoutes } from "./routes/agent";
+import { historyRoutes } from "./routes/history";
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 5000;
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
@@ -47,6 +48,7 @@ app.get("/", (req: express.Request, res: express.Response) => {
 });
 
 app.use("/agent", agentRoutes);
+app.use("/history", historyRoutes);
 
 // Initialize Socket.IO server
 const io = new SocketIOServer(server, {

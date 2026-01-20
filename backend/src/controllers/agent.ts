@@ -8,6 +8,7 @@ import { PLANNER_PROMPT } from '../prompts/planner';
 
 import { Request, Response } from 'express';
 import { currentTimeTool } from '../tools/current-time-tool';
+import { DrizzleSession } from '../utils/drizzle-session';
 
 const AGENT_PROMPTS: Record<string, string> = {
     'Personal': PERSONAL_PROMPT,
@@ -20,10 +21,14 @@ const AGENT_PROMPTS: Record<string, string> = {
 export const agentController = {
     chat: async (req: Request, res: Response) => {
         try {
-            const body = req.body as { message?: string; socketId?: string; agent?: string };
+            const body = req.body as { message?: string; socketId?: string; agent?: string; userId?: string; conversationId?: string };
+            const userId = body?.userId;
             const userMessage = body?.message || 'Hello! How can I help you today?';
             const socketId = body?.socketId;
+            const conversationId = body?.conversationId;
             const agentName = body?.agent || 'Personal';
+
+            const session = new DrizzleSession(agentName, conversationId, userId);
 
             // Get Socket.IO instance
             const io = (globalThis as any).io as SocketIOServer;
@@ -45,6 +50,7 @@ export const agentController = {
                 agent,
                 userMessage, {
                 stream: true,
+                session,
             }
             );
 
@@ -80,6 +86,7 @@ export const agentController = {
                                 success: true,
                             })
                         );
+
                     });
 
                     stream.on('error', (streamError: Error) => {
